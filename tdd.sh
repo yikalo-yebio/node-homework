@@ -1,6 +1,5 @@
 if [ $# -gt 0 ]; then
-    pattern="^tdd/$1\\.test\\.js$"
+    npx jest --setupFiles ./jest.setup.js --runTestsByPath "tdd/$1.test.js" --detectOpenHandles
 else
-    pattern="^tdd/.+\\.test\\.js"
+    npx jest --setupFiles ./jest.setup.js --detectOpenHandles
 fi
-npx jest --testPathPatterns "$pattern" --detectOpenHandles
