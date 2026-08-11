@@ -1,7 +1,7 @@
 const crypto = require("crypto");
 const util = require("util");
 const { userSchema } = require("../validation/userSchema");
-const pool = require("../db/pg-pool");
+const prisma = require("../db/prisma");
 
 const scrypt = util.promisify(crypto.scrypt);
 
@@ -43,40 +43,43 @@ async function register(req, res, next) {
   });
 
   if (error) {
-    console.log(error.details);
-
     return res.status(400).json({
       message: "Validation failed",
       details: error.details,
     });
   }
 
-  value.hashed_password = await hashPassword(value.password);
+  const { name, email, password } = value;
 
-  let result;
+  const hashedPassword = await hashPassword(password);
+
+  let user = null;
 
   try {
-    result = await pool.query(
-      `INSERT INTO users (email, name, hashed_password)
-       VALUES ($1, $2, $3)
-       RETURNING id, email, name`,
-      [value.email, value.name, value.hashed_password]
-    );
-  } catch (error) {
-    console.log("code:", error.code);
-    console.log("constraint:", error.constraint);
-    console.log("detail:", error.detail);
-
-    if (error.code === "23505") {
+    user = await prisma.user.create({
+      data: {
+        name,
+        email,
+        hashedPassword,
+      },
+      select: {
+        name: true,
+        email: true,
+        id: true,
+      },
+    });
+  } catch (err) {
+    if (
+      err.name === "PrismaClientKnownRequestError" &&
+      err.code === "P2002"
+    ) {
       return res.status(400).json({
         message: "A user with that email already exists.",
       });
     }
 
-    return next(error);
+    return next(err);
   }
-
-  const user = result.rows[0];
 
   global.user_id = user.id;
 
@@ -92,29 +95,28 @@ async function logon(req, res, next) {
       req.body = {};
     }
 
-    const email =
+    let email =
       typeof req.body.email === "string"
-        ? req.body.email.trim().toLowerCase()
+        ? req.body.email.trim()
         : "";
 
     const password = req.body.password;
 
-    const result = await pool.query(
-      "SELECT * FROM users WHERE email = $1",
-      [email]
-    );
+    email = email.toLowerCase();
 
-    if (result.rows.length === 0) {
+    const user = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user) {
       return res.status(401).json({
         message: "Invalid email or password.",
       });
     }
 
-    const user = result.rows[0];
-
     const goodCredentials = await comparePassword(
       password,
-      user.hashed_password
+      user.hashedPassword
     );
 
     if (!goodCredentials) {
