@@ -5,7 +5,7 @@ const notFound = require("./middleware/not-found");
 const errorHandler = require("./middleware/error-handler");
 const authMiddleware = require("./middleware/auth");
 const taskRouter = require("./routes/taskRoutes");
-const pool = require("./db/pg-pool");
+const analyticsRouter = require("./routes/analyticsRoutes");
 const prisma = require("./db/prisma");
 
 const app = express();
@@ -27,17 +27,33 @@ app.post("/testpost", (req, res) => {
 });
 
 app.get("/health", async (req, res) => {
-    try {
+  try {
     await prisma.$queryRaw`SELECT 1`;
-    res.json({ status: 'ok', db: 'connected' });
+
+    res.json({
+      status: "ok",
+      db: "connected",
+    });
   } catch (err) {
-    res.status(500).json({ status: 'error', db: 'not connected', error: err.message });
+    if (err.name === "PrismaClientInitializationError") {
+      console.error(
+        "Couldn't connect to the database. Is it running?"
+      );
+    }
+
+    res.status(500).json({
+      status: "error",
+      db: "not connected",
+      error: err.message,
+    });
   }
 });
 
 app.use("/api", timeRouter);
 app.use("/api/users", userRouter);
 app.use("/api/tasks", authMiddleware, taskRouter);
+app.use("/api/analytics", authMiddleware, analyticsRouter);
+
 app.use(notFound);
 app.use(errorHandler);
 
@@ -47,12 +63,13 @@ const server = app.listen(port, () => {
   console.log(`Server is listening on port ${port}...`);
 });
 
- server.on("error", (err) => {
+server.on("error", (err) => {
   if (err.code === "EADDRINUSE") {
     console.error(`Port ${port} is already in use.`);
   } else {
     console.error("Server error:", err);
   }
+
   process.exit(1);
 });
 
@@ -60,6 +77,7 @@ let isShuttingDown = false;
 
 async function shutdown(code = 0) {
   if (isShuttingDown) return;
+
   isShuttingDown = true;
 
   console.log("Shutting down gracefully...");
@@ -67,15 +85,15 @@ async function shutdown(code = 0) {
   try {
     await new Promise((resolve, reject) => {
       server.close((err) => {
-        if (err) reject(err);
-        else resolve();
+        if (err) {
+          reject(err);
+        } else {
+          resolve();
+        }
       });
     });
 
     console.log("HTTP server closed.");
-
-    await pool.end();
-    console.log("Database pool closed.");
 
     await prisma.$disconnect();
     console.log("Prisma disconnected");

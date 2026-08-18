@@ -1,7 +1,8 @@
 const express = require("express");
-const auth = require("../middleware/auth");
+
 const {
   create,
+  bulkCreate,
   index,
   show,
   update,
@@ -10,10 +11,12 @@ const {
 
 const router = express.Router();
 
-router.post("/", auth, create);
-router.get("/", auth, index);
-router.get("/:id", auth, show);
-router.patch("/:id", auth, update);
-router.delete("/:id", auth, deleteTask);
+router.post("/", create);
+router.post("/bulk", bulkCreate);
+
+router.get("/", index);
+router.get("/:id", show);
+router.patch("/:id", update);
+router.delete("/:id", deleteTask);
 
 module.exports = router;
