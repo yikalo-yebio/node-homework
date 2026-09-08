@@ -31,7 +31,7 @@ app.use(
 );
 
 // Body and cookie parsers
-app.use(express.json());
+app.use(express.json({ limit: "1mb" }));
 app.use(cookieParser());
 
 // XSS protection must come after the parsers

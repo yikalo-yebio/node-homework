@@ -117,6 +117,26 @@ async function index(req, res, next) {
       };
     }
 
+    const allowedSortFields = [
+      "title",
+      "createdAt",
+      "isCompleted",
+    ];
+
+    const allowedSortDirections = [
+      "asc",
+      "desc",
+    ];
+
+    const sortBy = allowedSortFields.includes(req.query.sortBy)
+      ? req.query.sortBy
+      : "createdAt";
+
+    const sortDirection =
+      allowedSortDirections.includes(req.query.sortDirection)
+        ? req.query.sortDirection
+        : "desc";
+
     const tasks = await prisma.task.findMany({
       where: whereClause,
       select: {
@@ -135,7 +155,7 @@ async function index(req, res, next) {
       skip,
       take: limit,
       orderBy: {
-        createdAt: "desc",
+        [sortBy]: sortDirection,
       },
     });
 
