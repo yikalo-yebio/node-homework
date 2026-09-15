@@ -285,6 +285,50 @@ async function update(req, res, next) {
   }
 }
 
+async function updateMany(req, res, next) {
+  if (!req.body) {
+    req.body = {};
+  }
+
+  const { error, value } = patchTaskSchema.validate(req.body, {
+    abortEarly: false,
+  });
+
+  if (error) {
+    return res.status(400).json({
+      message: error.message,
+    });
+  }
+
+  if (
+    req.query.isCompleted !== "true" &&
+    req.query.isCompleted !== "false"
+  ) {
+    return res.status(400).json({
+      message: "isCompleted query parameter must be true or false.",
+    });
+  }
+
+  const isCompleted = req.query.isCompleted === "true";
+
+  try {
+    const result = await prisma.task.updateMany({
+      where: {
+        userId: req.user.id,
+        isCompleted,
+      },
+      data: value,
+    });
+
+    return res.status(200).json({
+      message: "Tasks updated successfully.",
+      tasksUpdated: result.count,
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
 async function deleteTask(req, res, next) {
   const id = parseInt(req.params?.id, 10);
 
@@ -326,5 +370,6 @@ module.exports = {
   index,
   show,
   update,
+  updateMany,
   deleteTask,
 };
