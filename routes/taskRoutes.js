@@ -1,4 +1,5 @@
 const express = require("express");
+
 const jwtMiddleware = require("../middleware/jwtMiddleware");
 
 const {
@@ -7,6 +8,7 @@ const {
   index,
   show,
   update,
+  updateMany,
   deleteTask,
 } = require("../controllers/taskController");
 
@@ -22,6 +24,9 @@ router.post("/bulk", bulkCreate);
 router.get("/", index);
 
 router.get("/:id", show);
+
+// Update many tasks using a query parameter
+router.patch("/", updateMany);
 
 router.patch("/:id", update);
 

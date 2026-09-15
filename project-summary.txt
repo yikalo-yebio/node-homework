@@ -1,1 +1,33 @@
 https://node-homework-8.onrender.com/
+
+
+Extra Backend Feature: Update Multiple Tasks
+
+I added an API that allows an authenticated user to update multiple
+tasks with a single operation using Prisma updateMany().
+
+Method:
+PATCH
+
+Path:
+/api/tasks
+
+Query Parameter:
+isCompleted=true
+or
+isCompleted=false
+
+Example:
+PATCH /api/tasks?isCompleted=false
+
+Request Body:
+{
+  "isCompleted": true
+}
+
+This example finds the authenticated user's tasks where isCompleted
+is false and updates them to isCompleted true.
+
+The API is protected by JWT authentication and CSRF protection.
+The userId from the authenticated user is included in the database
+query so users can only update their own tasks.
